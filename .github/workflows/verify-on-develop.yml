@@ -1,0 +1,27 @@
+name: "verify develop branch"
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle_command:
+          - :app:assembleRelease
+          - :app:assembleDebug
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: build test
+        run: ./gradlew ${{ matrix.gradle_command }} 
