@@ -17,11 +17,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
 
       - name: build test
         run: ./gradlew ${{ matrix.gradle_command }} 
