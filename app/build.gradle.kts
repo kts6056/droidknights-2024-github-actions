@@ -48,6 +48,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":feature:a:feature1"))
+    implementation(project(":feature:a:feature2"))
+    implementation(project(":feature:b:feature3"))
+    implementation(project(":feature:b:feature4"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
