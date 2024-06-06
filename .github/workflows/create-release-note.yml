@@ -1,4 +1,4 @@
-name: Generate Release Notes
+name: "[CD] Generate Release Notes"
 
 on:
   push:

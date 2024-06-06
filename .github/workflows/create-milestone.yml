@@ -1,0 +1,57 @@
+name: "[CD] Create Weekly Deployment Milestone"
+
+on:
+  schedule:
+    - cron: "0 1 * * 1" # 한국 기준으로 매주 월요일 오전 10시에 실행해요
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-milestone:
+    runs-on: self-hosted
+    steps:
+      - name: Get current week and year
+        id: current-week-year
+        run: |
+          current_year=$(TZ="Asia/Seoul" date +'%y')
+          current_week=$(TZ="Asia/Seoul" date +'%V')
+          echo "::set-output name=current_year::$current_year"
+          echo "::set-output name=current_week::$current_week"
+
+      - name: Calculate future milestone week and year
+        id: future-week-year
+        run: |
+          current_week=${{ steps.current-week-year.outputs.current_week }}
+          current_year=${{ steps.current-week-year.outputs.current_year }}
+
+          next_week=$((current_week + 4))
+          next_year=$current_year
+
+          if [ $next_week -gt 52 ]; then
+            next_week=$((next_week - 52))
+            next_year=$((current_year + 1))
+          fi
+
+          echo "::set-output name=next_year::$next_year"
+          echo "::set-output name=next_week::$next_week"
+
+      - name: Create Milestone
+        run: |
+          next_year=${{ steps.future-week-year.outputs.next_year }}
+          next_week=${{ steps.future-week-year.outputs.next_week }}
+          deployment_date=$(TZ="Asia/Seoul" date -d "4 weeks" +'%Y-%m-%dT09:00:00Z')
+
+          version_name="${next_year}.${next_week}.0"
+
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/milestones \
+            -d @- << EOF
+          {
+            "title": "${version_name}",
+            "due_on": "${deployment_date}"
+          }
+          EOF
