@@ -1,0 +1,32 @@
+changelog:
+  exclude:
+    authors:
+      - github-actions
+  categories:
+    - title: 'bug'
+      labels:
+        - 'bug'
+    - title: 'documentation'
+      labels:
+        - 'documentation'
+    - title: 'duplicate'
+      labels:
+        - 'duplicate'
+    - title: 'enhancement'
+      labels:
+        - 'enhancement'
+    - title: 'good first issue'
+      labels:
+        - 'good first issue'
+    - title: 'help wanted'
+      labels:
+        - 'help wanted'
+    - title: 'invalid'
+      labels:
+        - 'invalid'
+    - title: 'question'
+      labels:
+        - 'question'
+    - title: 'wontfix'
+      labels:
+        - 'wontfix'

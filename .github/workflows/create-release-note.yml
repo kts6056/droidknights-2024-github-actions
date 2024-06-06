@@ -1,0 +1,43 @@
+name: Generate Release Notes
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  TARGET_BRANCH: 'main'
+
+jobs:
+  generate-notes:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+            
+      - name: Get App Version
+        run: |
+          echo "VERSION_NAME=24.6.11" >> $GITHUB_ENV
+          echo "VERSION_CODE=240611" >> $GITHUB_ENV
+
+      - name: Create Release
+        run: |
+          RESPONSE=$(curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/kts6056/droidknights-2024-github-actions/releases \
+            -d '{"tag_name":"${{ env.VERSION_CODE }}","target_commitish":"${{ env.TARGET_BRANCH }}","name":"${{ env.VERSION_NAME }}","draft":false,"prerelease":true,"generate_release_notes":true}' \
+            -w "\n%{http_code}" -o -)
+
+          RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
+          RESPONSE_CODE=$(echo "$RESPONSE" | tail -n 1)
+
+          echo "Response Code: $RESPONSE_CODE"
+          echo "Response Body: $RESPONSE_BODY"
+
+          if [ "$RESPONSE_CODE" -lt 200 ] || [ "$RESPONSE_CODE" -gt 299 ]; then
+            exit 1
+          fi
