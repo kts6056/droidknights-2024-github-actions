@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+apply from: "${project.rootDir}/app-version.gradle"
+
 android {
     namespace = "com.example.myapplication"
     compileSdk = 34
@@ -12,9 +14,8 @@ android {
         applicationId = "com.example.myapplication"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = appVersion.code
+        versionName = appVersion.name
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -23,7 +24,6 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
