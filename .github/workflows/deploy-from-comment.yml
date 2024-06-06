@@ -4,43 +4,49 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   parse-comment:
     if: github.event.issue.pull_request != null && startsWith(github.event.comment.body, '/gradle')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       INPUT: ${{ github.event.comment.body }}
     outputs:
-      gradle-commands: ${{ steps.set-outputs.outputs.gradle-commands }}
-      comment-id: ${{ steps.set-outputs.outputs.comment-id }}
+      gradle-commands: ${{ steps.set-outputs.outputs.result }}
     steps:
       - name: Set output values
         id: set-outputs
         run: |
-          GRADLE_COMMANDS=''
-          if [[ "$INPUT" == *"/gradle all"* ]]; then
-            GRADLE_COMMANDS='assembleDebug,assembleRelease'
-          else
-            if [[ "$INPUT" == *"/gradle debug"* ]]; then
-              GRADLE_COMMANDS+='assembleDebug,'
-            fi
-            if [[ "$INPUT" == *"/gradle release"* ]]; then
-              GRADLE_COMMANDS+='assembleRelease,'
-            fi
-            GRADLE_COMMANDS=${GRADLE_COMMANDS%,}
+          GRADLE_COMMANDS='{"gradle_command":[]}'
+          if echo "$INPUT" | grep -iq "/gradle all"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleDebug","assembleRelease"]}'
+          elif echo "$INPUT" | grep -iq "/gradle release"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleRelease"]}'
+          elif echo "$INPUT" | grep -iq "/gradle debug"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleDebug"]}'
           fi
-          echo "gradle-commands=$GRADLE_COMMANDS" >> $GITHUB_OUTPUT
-          echo "comment-id=${{ github.event.comment.id }}" >> $GITHUB_OUTPUT
+          echo "result=$GRADLE_COMMANDS" >> $GITHUB_OUTPUT
 
   build:
     needs: parse-comment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
-        gradle-command: ${{ fromJson(needs.parse-comment.outputs['gradle-commands']) }}
-    outputs:
-      artifact-urls: ${{ steps.collect-artifacts.outputs.urls }}
+        gradle-command: ${{ fromJson(needs.parse-comment.outputs.gradle-commands).gradle_command }}
     steps:
+      - name: Add triggered reaction
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: rocket
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -54,7 +60,6 @@ jobs:
         id: apk
         shell: bash
         run: |
-          echo "ID=$(openssl rand -hex 4)" >> $GITHUB_OUTPUT
           echo "PATH=$(find . -name *.apk)" >> $GITHUB_OUTPUT
           echo "NAME=$(basename $(find . -name *.apk))" >> $GITHUB_OUTPUT
 
@@ -63,31 +68,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.apk.outputs.PATH }}
-          name: "${{ needs.parse-comment.outputs.comment-id }}-${{ matrix.gradle-command }}"
+          name: "${{ github.event.comment.id }}-${{ matrix.gradle-command }}"
 
-      - name: Collect artifact URLs
-        id: collect-artifacts
-        run: |
-          echo "urls=$(echo "artifact-${{ matrix.gradle-command }}: ${{ steps.upload-artifact.outputs.artifact-url }}")" >> $GITHUB_OUTPUT
-
-  post-comment:
-    needs: [build, parse-comment]
-    runs-on: ubuntu-latest
-    steps:
       - name: Create APK download links
         id: create-links
         run: |
-          echo "Download the APK files from the following links:" > download_links.txt
-          for url in ${{ needs.build.outputs.artifact-urls }}; do
-            build_type=$(echo $url | cut -d'-' -f2)
-            artifact_url=$(echo $url | cut -d' ' -f2)
-            echo "[$build_type APK]($artifact_url)" >> download_links.txt
-          done
+          echo "빌드 파일이 준비 되었어요 [${{ matrix.gradle-command }} Build APK](${{ steps.upload-artifact.outputs.artifact-url }})" > download_links.txt
+          echo "message=$(cat download_links.txt)"
 
       - name: Post comment with download links
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.issue.number }}
-          body: |
-            ## APK Build Results
-            $(cat download_links.txt)
+          body-path: 'download_links.txt'
