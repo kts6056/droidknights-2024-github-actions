@@ -1,0 +1,39 @@
+name: "Update App Version"
+
+inputs:
+  year:
+    description: "업데이트 할 앱 버전 정보 year"
+    required: true
+  week_no:
+    description: "업데이트 할 앱 버전 정보 week_no"
+    required: true
+  hotfix:
+    description: "업데이트 할 앱 버전 정보 hotfix"
+    required: true
+  file:
+    description: "업데이트 할 파일 경로"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update app version
+      shell: bash
+      run: |
+        VERSION_FILE="${{ inputs.file }}"
+        if command -v jq &> /dev/null; then
+          # jq가 설치되어 있는 경우
+          jq '.year = $year | .week_no = $week_no | .hotfix = $hotfix' \
+            --argjson year "${{ inputs.year }}" \
+            --argjson week_no "${{ inputs.week_no }}" \
+            --argjson hotfix "${{ inputs.hotfix }}" \
+            $VERSION_FILE > tmp.$$.json && mv tmp.$$.json $VERSION_FILE
+        else
+          # jq가 설치되어 있지 않은 경우
+          sed -i "s/\"year\": [0-9]\+/\"year\": ${{ inputs.year }}/" $VERSION_FILE
+          sed -i "s/\"week_no\": [0-9]\+/\"week_no\": ${{ inputs.week_no }}/" $VERSION_FILE
+          sed -i "s/\"hotfix\": [0-9]\+/\"hotfix\": ${{ inputs.hotfix }}/" $VERSION_FILE
+        fi
+        git add $VERSION_FILE
+        git commit -m "Update app version to ${{ inputs.year }}.${{ inputs.week_no }}.${{ inputs.hotfix }}"
+        git push origin HEAD

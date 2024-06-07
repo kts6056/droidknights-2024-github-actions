@@ -3,3 +3,4 @@ local.properties
 .idea
 local.properties
 .kotlin
+.DS_Store
