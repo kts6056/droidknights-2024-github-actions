@@ -1,0 +1,73 @@
+import groovy.json.JsonSlurper
+
+class AppVersionExtension {
+    String name
+    int code
+
+    AppVersionExtension(String name, int code) {
+        this.name = name
+        this.code = code
+    }
+}
+
+class AppVersion {
+    int year
+    int weekNo
+    int hotfix
+
+    AppVersion(year, weekNo, hotfix) {
+        this.year = year
+        this.weekNo = weekNo
+        this.hotfix = hotfix
+    }
+
+    String getName() {
+        return year + "." + weekNo + "." + hotfix
+    }
+
+    int getCode() {
+        return year * 10000 + weekNo * 100 + hotfix
+    }
+
+    @Override
+    String toString() {
+        return getName()
+    }
+}
+
+class AppVersionPlugin implements Plugin<Project> {
+    @Override
+    void apply(Project project) {
+        def versionFile = getAppVersionFile(project)
+        def appVersion = getAppVersion(versionFile)
+        setupAppVersionExtension(project, appVersion)
+    }
+
+    private static File getAppVersionFile(Project project) {
+        def file = new File(project.getRootDir(), "app-version.json")
+        if (!file.exists()) {
+            throw new IllegalStateException("app-version.json' file not found")
+        }
+        return file
+    }
+
+    private static AppVersion getAppVersion(File versionFile) {
+        def appVersionJson = new JsonSlurper().parseText(versionFile.text)
+        return new AppVersion(
+                appVersionJson.year,
+                appVersionJson.week_no,
+                appVersionJson.hotfix
+        )
+    }
+
+    private static void setupAppVersionExtension(Project project, AppVersion appVersion) {
+        project.extensions.create(
+                "appVersion",
+                AppVersionExtension.class,
+                appVersion.getName(),
+                appVersion.getCode()
+        )
+    }
+}
+
+apply plugin: AppVersionPlugin

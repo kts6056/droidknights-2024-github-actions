@@ -1,0 +1,29 @@
+name: "Calculate Distribution Version"
+description: "Calculate Next Distribution Version"
+
+outputs:
+  next_year:
+    description: "다음 정기배포 년도 버전"
+    value: ${{ steps.calc-next-version.outputs.next_year }}
+  next_week:
+    description: "다음 정기배포 주차 버전"
+    value: ${{ steps.calc-next-version.outputs.next_week }}
+  next_hotfix:
+    description: "다음 정기배포 핫픽스 버전"
+    value: ${{ steps.calc-next-version.outputs.next_hotfix }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Calc Next Version
+      id: calc-next-version
+      shell: bash
+      run: |
+        # 다음 정기배포 버전 정보
+        year=$(TZ="Asia/Seoul" date -d "next week" +'%y')
+        week=$(TZ="Asia/Seoul" date -d "next week" +'%V')
+        hotfix=00
+        
+        echo "next_year=$year" >> $GITHUB_OUTPUT
+        echo "next_week=$week" >> $GITHUB_OUTPUT
+        echo "next_hotfix=$hotfix" >> $GITHUB_OUTPUT

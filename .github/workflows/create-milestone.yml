@@ -1,0 +1,32 @@
+name: "[CD] Create Weekly Deployment Milestone"
+
+on:
+  schedule:
+    - cron: "0 1 * * 1" # 한국 기준으로 매주 월요일 오전 10시에 실행해요
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Milestone
+        run: |
+          next_year=$(TZ="Asia/Seoul" date -d "+4 weeks" +'%y')
+          next_week=$(TZ="Asia/Seoul" date -d "+4 weeks" +'%V')
+          deployment_date=$(TZ="Asia/Seoul" date -d "4 weeks" +'%Y-%m-%dT09:00:00Z')
+
+          version_name="${next_year}.${next_week}.0"
+
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/milestones \
+            -d @- << EOF
+          {
+            "title": "${version_name}",
+            "due_on": "${deployment_date}"
+          }
+          EOF

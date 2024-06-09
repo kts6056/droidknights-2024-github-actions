@@ -1,0 +1,25 @@
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches:
+      - develop
+
+jobs:
+  unit_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle_command:
+          - coreTest
+          - featureATest
+          - featureBTest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+
+      - name: build test
+        run: ./gradlew ${{ matrix.gradle_command }}

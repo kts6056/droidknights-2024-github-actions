@@ -1,0 +1,46 @@
+name: "[CD] Create Release Branch and Update App Version"
+
+on:
+  schedule:
+    - cron: '0 8 * * 5' # 한국 기준으로 매주 금요일 오후 5시에 실행해요
+  workflow_dispatch:
+
+env:
+  BRANCH_PREFIX: release
+
+permissions:
+  contents: write
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Git User Info
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Create Release Branch
+        id: create-release-branch
+        run: |
+          year=$(TZ="Asia/Seoul" date -d "next week" +'%y')
+          week=$(TZ="Asia/Seoul" date -d "next week" +'%V')
+          hotfix=00
+
+          next_version="${year}${week}${hotfix}"
+          branch_name="${BRANCH_PREFIX}/$next_version"
+
+          git switch -c $branch_name
+          git push origin $branch_name
+          echo "브랜치 $branch_name 생성했어요"
+
+      - name: Update App Version
+        uses: ./.github/actions/update-app-version
+        with:
+          year: $(TZ="Asia/Seoul" date -d "next week" +'%y')
+          week_no: $(TZ="Asia/Seoul" date -d "next week" +'%V')
+          hotfix: 00
+          file: ./app-version.json

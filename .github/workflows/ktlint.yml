@@ -1,0 +1,26 @@
+name: "[CI] verify pull request"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  ktlint:
+    name: Run kotlin linter
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+
+      - name: ktlint
+        uses: ScaCap/action-ktlint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-check
+          fail_on_error: true

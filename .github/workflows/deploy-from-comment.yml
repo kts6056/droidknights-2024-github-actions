@@ -1,0 +1,85 @@
+name: "[Build] Deploy APKs on comment"
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  parse-comment:
+    if: github.event.issue.pull_request != null && startsWith(github.event.comment.body, '/gradle')
+    runs-on: ubuntu-latest
+    env:
+      INPUT: ${{ github.event.comment.body }}
+    outputs:
+      gradle-commands: ${{ steps.set-outputs.outputs.result }}
+    steps:
+      - name: Set output values
+        id: set-outputs
+        run: |
+          GRADLE_COMMANDS='{"gradle_command":[]}'
+          
+          if echo "$INPUT" | grep -iq "/gradle all"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleDebug","assembleRelease"]}'
+          elif echo "$INPUT" | grep -iq "/gradle release"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleRelease"]}'
+          elif echo "$INPUT" | grep -iq "/gradle debug"; then
+            GRADLE_COMMANDS='{"gradle_command":["assembleDebug"]}'
+          fi
+
+          echo "result=$GRADLE_COMMANDS" >> $GITHUB_OUTPUT
+
+  build:
+    needs: parse-comment
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle-command: ${{ fromJson(needs.parse-comment.outputs.gradle-commands).gradle_command }}
+    steps:
+      - name: Add triggered reaction
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: rocket
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+
+      - name: Build APK
+        run: ./gradlew ${{ matrix.gradle-command }}
+
+      - name: Set APK path
+        id: apk
+        shell: bash
+        run: |
+          echo "PATH=$(find . -name *.apk)" >> $GITHUB_OUTPUT
+          echo "NAME=$(basename $(find . -name *.apk))" >> $GITHUB_OUTPUT
+
+      - name: Upload APK to GitHub Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ${{ steps.apk.outputs.PATH }}
+          name: "${{ github.event.comment.id }}-${{ matrix.gradle-command }}"
+
+      - name: Create APK download links
+        id: create-links
+        run: |
+          echo "빌드 파일이 준비 되었어요 [${{ matrix.gradle-command }} Build APK](${{ steps.upload-artifact.outputs.artifact-url }})" > download_links.txt
+          echo "message=$(cat download_links.txt)"
+
+      - name: Post comment with download links
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body-path: 'download_links.txt'
