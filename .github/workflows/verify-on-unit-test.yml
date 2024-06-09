@@ -1,3 +1,5 @@
+name: "[CI] verify unit test"
+
 on:
   pull_request:
     types: [opened, synchronize]
