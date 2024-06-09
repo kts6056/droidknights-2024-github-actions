@@ -54,6 +54,8 @@ jobs:
 
       - name: Setup Development Environment
         uses: ./.github/actions/setup-development-environment
+        with:
+          google-services: ${{ secrets.GOOGLE_SERVICES }}
 
       - name: Build APK
         run: ./gradlew ${{ matrix.gradle-command }}

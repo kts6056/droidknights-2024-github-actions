@@ -1,0 +1,43 @@
+name: "[CI] Deploy Firebase App Distribution"
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  firebase-app-distribution:
+    name: Firebase App Distribution
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+        with:
+            google-services: ${{ secrets.GOOGLE_SERVICES }}
+  
+      - name: Build App
+        run: ./gradlew ":app:assembleDebug"
+
+      - name: Set APK path
+        id: apk
+        run: |
+          echo "NAME=$(find ./ -type f -name "*.apk" -print -quit)" >> $GITHUB_OUTPUT
+  
+      - name: Create Firebase Credentials
+        run: |
+          echo -n "${{ secrets.FIREBASE_CREDENTIALS }}" | base64 --decode > firebase_credentials.json
+  
+      - name: Upload App Artifact To Firebase App Distribution
+        uses: ./.github/actions/firebase-app-distribution
+        timeout-minutes: 10
+        with:
+          releaseNotes: "[${{ github.run_number }}] : ${{github.event.head_commit.message}}"
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFile: ./firebase_credentials.json
+          groups: dev
+          file: ${{ steps.apk.outputs.NAME }}
+          debug: true

@@ -18,6 +18,8 @@ jobs:
 
       - name: Setup Development Environment
         uses: ./.github/actions/setup-development-environment
+        with:
+          google-services: ${{ secrets.GOOGLE_SERVICES }}
 
       - name: Build
         run: ./gradlew ${{ matrix.gradle_command }}
