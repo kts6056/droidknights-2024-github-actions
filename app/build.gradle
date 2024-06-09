@@ -24,6 +24,24 @@ android {
         }
     }
 
+    lint {
+        htmlReport true
+        htmlOutput file("$rootDir/lint/${project.path}/lint-report.html")
+        textReport true
+        textOutput file("$rootDir/lint/${project.path}/lint-report.txt")
+        xmlReport true
+        xmlOutput file("$rootDir/lint/${project.path}/lint-report.xml")
+
+        abortOnError true
+        checkReleaseBuilds true
+
+        absolutePaths false
+        ignoreTestSources true
+        checkDependencies true
+
+        baseline file("$rootDir/lint/lint-baseline.xml")
+    }
+
     buildTypes {
         release {
             proguardFiles(

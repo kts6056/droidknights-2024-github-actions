@@ -5,3 +5,4 @@ local.properties
 .kotlin
 .DS_Store
 google-services.json
+lint-baseline.xml
