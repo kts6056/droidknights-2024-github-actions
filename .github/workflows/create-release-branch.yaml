@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   create-release-branch:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

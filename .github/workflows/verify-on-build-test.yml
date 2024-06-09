@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         gradle_command:

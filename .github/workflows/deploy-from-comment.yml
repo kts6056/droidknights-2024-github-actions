@@ -15,7 +15,7 @@ concurrency:
 jobs:
   parse-comment:
     if: github.event.issue.pull_request != null && startsWith(github.event.comment.body, '/gradle')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       INPUT: ${{ github.event.comment.body }}
     outputs:
@@ -25,6 +25,7 @@ jobs:
         id: set-outputs
         run: |
           GRADLE_COMMANDS='{"gradle_command":[]}'
+          
           if echo "$INPUT" | grep -iq "/gradle all"; then
             GRADLE_COMMANDS='{"gradle_command":["assembleDebug","assembleRelease"]}'
           elif echo "$INPUT" | grep -iq "/gradle release"; then
@@ -32,11 +33,12 @@ jobs:
           elif echo "$INPUT" | grep -iq "/gradle debug"; then
             GRADLE_COMMANDS='{"gradle_command":["assembleDebug"]}'
           fi
+
           echo "result=$GRADLE_COMMANDS" >> $GITHUB_OUTPUT
 
   build:
     needs: parse-comment
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         gradle-command: ${{ fromJson(needs.parse-comment.outputs.gradle-commands).gradle_command }}
