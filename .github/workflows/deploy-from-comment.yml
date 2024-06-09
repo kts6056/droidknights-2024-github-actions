@@ -75,7 +75,8 @@ jobs:
       - name: Create APK download links
         id: create-links
         run: |
-          echo "빌드 파일이 준비 되었어요 [${{ matrix.gradle-command }} Build APK](${{ steps.upload-artifact.outputs.artifact-url }})" > download_links.txt
+          echo "빌드 파일이 준비 되었어요 " > download_links.txt
+          echo "${{ steps.upload-artifact.outputs.artifact-url }}" >> download_links.txt
           echo "message=$(cat download_links.txt)"
 
       - name: Post comment with download links
