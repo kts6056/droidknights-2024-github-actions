@@ -1,0 +1,45 @@
+name: 'Get App Version'
+description: 'Get App Version'
+
+outputs:
+  year:
+    description: "앱 버전 중 년도 버전"
+    value: ${{ steps.get-app-version.outputs.year }}
+  week:
+    description: "앱 버전 중 주차 버전"
+    value: ${{ steps.get-app-version.outputs.week }}
+  hotfix:
+    description: "앱 버전 중 핫픽스 버전"
+    value: ${{ steps.get-app-version.outputs.hotfix }}
+  version_code:
+    description: "앱 버전 코드"
+    value: ${{ steps.get-app-version.outputs.version_code }}
+  version_name:
+    description: "앱 버전 이름"
+    value: ${{ steps.get-app-version.outputs.version_name }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get App Version
+      id: get-app-version
+      shell: bash
+      run: |
+        # app-version.json 파일의 내용을 읽어 변수에 저장해요
+        year=$(jq .year app-version.json)
+        week=$(jq .week_no app-version.json)
+        hotfix=$(jq .hotfix app-version.json)
+
+        # VERSION_CODE용 두 자리 변수들
+        formatted_year=$(printf "%02d" $year)
+        formatted_week=$(printf "%02d" $week)
+        formatted_hotfix=$(printf "%02d" $hotfix)
+
+        # GITHUB_OUTPUT에 설정해요
+        {
+          echo "year=$year"
+          echo "week=$week"
+          echo "hotfix=$hotfix"
+          echo "version_code=$formatted_year$formatted_week$formatted_hotfix"
+          echo "version_name=$year.$week.$hotfix"
+        } >> $GITHUB_OUTPUT

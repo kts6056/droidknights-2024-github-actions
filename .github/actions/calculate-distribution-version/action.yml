@@ -20,20 +20,10 @@ runs:
       shell: bash
       run: |
         # 다음 정기배포 버전 정보
-        current_year=$(TZ="Asia/Seoul" date +'%y')
-        current_week=$(TZ="Asia/Seoul" date +'%V')
-
-        # 다음주 정기배포를 + 1
-        next_year=$current_year
-        next_week=$(($current_week + 1))
-        next_hotfix=00
-
-        # 주차 번호가 52를 초과하는 경우 연도를 증가시키고 주차를 계산해요
-        if [ $next_week -gt 52 ]; then
-            next_year=$((next_year + 1))
-            next_week=$((next_week - 52))
-        fi
-
-        echo "next_year=$next_year" >> $GITHUB_OUTPUT
-        echo "next_week=$next_week" >> $GITHUB_OUTPUT
-        echo "next_hotfix=$next_hotfix" >> $GITHUB_OUTPUT
+        year=$(TZ="Asia/Seoul" date -d "next week" +'%y')
+        week=$(TZ="Asia/Seoul" date -d "next week" +'%V')
+        hotfix=00
+        
+        echo "next_year=$year" >> $GITHUB_OUTPUT
+        echo "next_week=$week" >> $GITHUB_OUTPUT
+        echo "next_hotfix=$hotfix" >> $GITHUB_OUTPUT
