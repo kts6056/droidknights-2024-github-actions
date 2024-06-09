@@ -1,0 +1,58 @@
+name: "[Build] Deploy All APKs"
+
+on:
+  push:
+    tags:
+      - preview/*
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle_command:
+          - :app:assembleRelease
+          - :app:assembleDebug
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+
+      - name: Build
+        run: ./gradlew ${{ matrix.gradle_command }}
+
+      - name: Set APK path
+        id: apk
+        shell: bash
+        run: |
+          echo "PATH=$(find . -name *.apk)" >> $GITHUB_OUTPUT
+          echo "NAME=$(basename $(find . -name *.apk))" >> $GITHUB_OUTPUT
+
+      - name: Upload APK to GitHub Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.NAME }}
+          path: ${{ steps.apk.outputs.PATH }}
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK from GitHub Artifact
+        uses: actions/download-artifact@v4
+
+      - name: Create ZIP file
+        run: |
+          mkdir -p apk_files
+          mv *.apk apk_files/
+          zip -r apks.zip apk_files/
+
+      - name: Upload ZIP to GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks.zip
+          path: apks.zip
