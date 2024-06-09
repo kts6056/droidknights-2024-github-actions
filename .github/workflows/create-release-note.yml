@@ -30,7 +30,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/kts6056/droidknights-2024-github-actions/releases \
+            https://api.github.com/repos/${{ github.repository }}/releases \
             -d "{\"tag_name\":\"$tag_name\",\"target_commitish\":\"main\",\"name\":\"$name\",\"generate_release_notes\":true}" \
             -w "\n%{http_code}" -o -)
 
@@ -42,4 +42,24 @@ jobs:
 
           if [ "$RESPONSE_CODE" -lt 200 ] || [ "$RESPONSE_CODE" -gt 299 ]; then
             exit 1
+          fi
+
+      - name: Close Milestone
+        shell: bash
+        run: |
+          # 마일스톤 이름으로 MILESTONE_NUMBER 얻기
+          MILESTONE_NUMBER=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/milestones" | \
+            jq -r --arg MILESTONE_NAME "${{ steps.get-app-version.outputs.version_name }}" '.[] | select(.title == $MILESTONE_NAME) | .number')
+  
+          # 해당 MILESTONE_NUMBER로 마일스톤 닫기
+          if [ ! -z "$MILESTONE_NUMBER" ]; then
+            curl -X PATCH \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/milestones/$MILESTONE_NUMBER" \
+              -d '{"state": "closed"}'
+          else
+            echo "Milestone not found"
           fi
