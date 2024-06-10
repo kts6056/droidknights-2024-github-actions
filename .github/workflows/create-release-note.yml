@@ -51,7 +51,7 @@ jobs:
           MILESTONE_NUMBER=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/milestones" | \
-            jq -r --arg MILESTONE_NAME "${{ steps.get-app-version.outputs.version_name }}" '.[] | select(.title == $MILESTONE_NAME) | .number')
+          jq -r --arg MILESTONE_NAME "${{ steps.get-app-version.outputs.version_name }}" '.[] | select(.title == $MILESTONE_NAME) | .number')
   
           # 해당 MILESTONE_NUMBER로 마일스톤 닫기
           if [ ! -z "$MILESTONE_NUMBER" ]; then

@@ -4,47 +4,20 @@ description: 'Android MissingTranslation Lint'
 runs:
   using: "composite"
   steps:
-    - name: Setup xmlstarlet
+    - name: Check MissingTranslation Lint
       shell: bash
-      run: |
-        # Homebrew 설치 확인
-        if ! command -v brew &> /dev/null
-        then
-            echo -e '\n homebrew 설치를 먼저 해주세요\n Homebrew 설치 방법 => https://brew.sh/'
-            exit 1
-        else
-            echo '✅ Homebrew 설치 확인됨.'
-        fi
-
-        # xmlstarlet 설치 확인
-        if ! command -v xmlstarlet --version &> /dev/null
-        then
-            brew install xmlstarlet
-            if [ $? -ne 0 ]; then
-                echo ':x: xmlstarlet 설치 실패.'
-                exit 1
-            fi
-        else
-            echo '✅ xmlstarlet 설치 확인됨.'
-        fi
-
-    - name: Check Android MissingTranslation Lint
-      shell: bash
-      continue-on-error: true # 미번역 문구가 없으면 xmlstarlet 필터링 작업에서 실패해요
+      continue-on-error: true # 미번역 문구가 없으면 xmlstarlet 필터링 작업에서 실패
       run: |
         ./gradlew :app:updateLintBaseline
         
         # MissingTranslation Lint 필터링
-        xmlstarlet sel -t -m "//issue[@id='MissingTranslation']" -v "@message" -n ./lint/lint-baseline.xml > ./lint/lint.text
-        while read line; do echo "• $line"; done < ./lint/lint.text > ./lint/message.text
+        xmlstarlet sel \
+          -t -m "//issue[@id='MissingTranslation']" \
+          -v "@message" -n ./lint/lint-baseline.xml \
+        | sed 's/^/• /' > ./lint/message.text
 
     - name: Set Result
       shell: bash
       run: |
-        if [ -s ./lint/message.text ]; then
-          # 미번역 문구가 있는 경우
-          exit 1
-        else
-          # 미번역 문구가 없는 경우
-          exit 0
-        fi
+        # 미번역 문구가 있는 경우 exit 1, 없는 경우 exit 0
+        [ -s ./lint/message.text ] && exit 1 || exit 0
