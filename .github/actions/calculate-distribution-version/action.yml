@@ -1,16 +1,23 @@
-name: "Calculate Distribution Version"
-description: "Calculate Next Distribution Version"
+name: 'Calculate Distribution Version'
+description: 'Calculate Next Distribution Version'
 
 outputs:
-  next_year:
+  year:
     description: "다음 정기배포 년도 버전"
-    value: ${{ steps.calc-next-version.outputs.next_year }}
-  next_week:
+    value: ${{ steps.calc-next-version.outputs.year }}
+  week:
     description: "다음 정기배포 주차 버전"
-    value: ${{ steps.calc-next-version.outputs.next_week }}
-  next_hotfix:
+    value: ${{ steps.calc-next-version.outputs.week }}
+  hotfix:
     description: "다음 정기배포 핫픽스 버전"
-    value: ${{ steps.calc-next-version.outputs.next_hotfix }}
+    value: ${{ steps.calc-next-version.outputs.hotfix }}
+  version_code:
+    description: "다음 정기배포 버전 코드"
+    value: ${{ steps.calc-next-version.outputs.version_code }}
+  version_name:
+    description: "다음 정기배포 버전 네임"
+    value: ${{ steps.calc-next-version.outputs.version_name }}
+  
 
 runs:
   using: "composite"
@@ -20,10 +27,15 @@ runs:
       shell: bash
       run: |
         # 다음 정기배포 버전 정보
-        year=$(TZ="Asia/Seoul" date -d "next week" +'%y')
-        week=$(TZ="Asia/Seoul" date -d "next week" +'%V')
+        year=$(TZ="Asia/Seoul" date +'%y')
+        week=$(TZ="Asia/Seoul" date +'%V')
         hotfix=00
         
-        echo "next_year=$year" >> $GITHUB_OUTPUT
-        echo "next_week=$week" >> $GITHUB_OUTPUT
-        echo "next_hotfix=$hotfix" >> $GITHUB_OUTPUT
+        version_code="${year}${week}00"
+        version_name="${year}.${week}.0"
+        
+        echo "year=$year" >> $GITHUB_OUTPUT
+        echo "week=$week" >> $GITHUB_OUTPUT
+        echo "hotfix=$hotfix" >> $GITHUB_OUTPUT
+        echo "version_code=$version_code" >> $GITHUB_OUTPUT
+        echo "version_name=$version_name" >> $GITHUB_OUTPUT

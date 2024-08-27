@@ -10,6 +10,7 @@ env:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   create-release-branch:
@@ -23,16 +24,25 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Create Release Branch
-        id: create-release-branch
+      - name: Calculate Release Version
+        id: calculate-distribution-version
+        uses: ./.github/actions/calculate-distribution-version
+
+      - name: Check Release Branch
         run: |
-          year=$(TZ="Asia/Seoul" date -d "next week" +'%y')
-          week=$(TZ="Asia/Seoul" date -d "next week" +'%V')
-          hotfix=00
+          echo "원격 브랜치 중 '${{ env.BRANCH_PREFIX }}/*' 형태가 존재하는지 확인해요"
+          existing_branches=$(git ls-remote --heads origin | grep "refs/heads/${{ env.BRANCH_PREFIX }}/" || true)
 
-          next_version="${year}${week}${hotfix}"
-          branch_name="${BRANCH_PREFIX}/$next_version"
+          if [ -n "$existing_branches" ]; then
+              formatted_branches=$(echo "$existing_branches" | sed 's/.*refs\/heads\///')
+              echo "$formatted_branches 브랜치들이 이미 존재해서 작업을 종료해요"
+          fi
+        
+      - name: Create Release Branch
+        run: |
+          branch_name="${{ env.BRANCH_PREFIX }}/${{ steps.calculate-distribution-version.outputs.version_code }}"
 
+          echo "릴리즈 브랜치 생성"
           git switch -c $branch_name
           git push origin $branch_name
           echo "브랜치 $branch_name 생성했어요"
@@ -40,7 +50,13 @@ jobs:
       - name: Update App Version
         uses: ./.github/actions/update-app-version
         with:
-          year: $(TZ="Asia/Seoul" date -d "next week" +'%y')
-          week_no: $(TZ="Asia/Seoul" date -d "next week" +'%V')
-          hotfix: 00
+          year: ${{ steps.calculate-distribution-version.outputs.year }}
+          week_no: ${{ steps.calculate-distribution-version.outputs.week }}
+          hotfix: ${{ steps.calculate-distribution-version.outputs.hotfix }}
           file: ./app-version.json
+
+      - name: Create Pull Request to Release
+        uses: ./.github/actions/create-pull-request-to-release
+        with:
+          branch: "${{ env.BRANCH_PREFIX }}/${{ steps.calculate-distribution-version.outputs.version_code }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
