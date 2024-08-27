@@ -1,0 +1,51 @@
+name: "Create Pull Request to Release"
+description: "Create Pull Request to Release"
+
+
+inputs:
+  branch:
+    description: 'base branch name to release'
+    required: true
+  github_token:
+    description: 'github token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Determine PR type and version
+      shell: bash
+      id: pr_details
+      run: |
+        BRANCH_NAME="${{ inputs.branch }}"
+
+        if [[ "$BRANCH_NAME" =~ ^release/([0-9]+)$ ]]; then
+          echo "PR_TYPE=Release" >> $GITHUB_ENV
+          echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        elif [[ "$BRANCH_NAME" =~ ^hotfix/([0-9]+)$ ]]; then
+          echo "PR_TYPE=Hotfix" >> $GITHUB_ENV
+          echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        else
+          echo "Invalid branch name. Must start with 'release/' or 'hotfix/'"
+          exit 1
+        fi
+        
+    - name: Set PR title and body
+      shell: bash
+      run: |
+        echo "TITLE=[SYNC] : ${{ env.PR_TYPE }} ${{ env.VERSION }}" >> $GITHUB_ENV
+        echo "BODY=This PR merges ${{ env.PR_TYPE }} version ${{ env.VERSION }} into the respective branches" >> $GITHUB_ENV
+
+    - name: Create Pull Request to main
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        gh pr create --base "main" --head "${{ inputs.branch }}" --title "${{ env.TITLE }}" --body "${{ env.BODY }}"
+
+    - name: Create Pull Request to develop
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        gh pr create --base "develop" --head "${{ inputs.branch }}" --title "${{ env.TITLE }}" --body "${{ env.BODY }}"
