@@ -27,6 +27,8 @@ jobs:
       - name: Calculate Release Version
         id: calculate-distribution-version
         uses: ./.github/actions/calculate-distribution-version
+        with:
+          file: ./app-version.json
 
       - name: Check Release Branch
         run: |
