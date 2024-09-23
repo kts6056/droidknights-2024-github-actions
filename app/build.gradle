@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 apply from: "${project.rootDir}/app-version.gradle"
@@ -20,6 +22,24 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+    }
+
+    lint {
+        htmlReport true
+        htmlOutput file("$rootDir/lint/${project.path}/lint-report.html")
+        textReport true
+        textOutput file("$rootDir/lint/${project.path}/lint-report.txt")
+        xmlReport true
+        xmlOutput file("$rootDir/lint/${project.path}/lint-report.xml")
+
+        abortOnError true
+        checkReleaseBuilds true
+
+        absolutePaths false
+        ignoreTestSources true
+        checkDependencies true
+
+        baseline file("$rootDir/lint/lint-baseline.xml")
     }
 
     buildTypes {
@@ -61,6 +81,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

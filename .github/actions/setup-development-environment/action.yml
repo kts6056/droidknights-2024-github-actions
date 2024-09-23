@@ -1,6 +1,11 @@
 # ./.github/actions/setup-development-environment/action.yml
 name: "Setup Development Environment"
 
+inputs:
+  google-services:
+    description: 'Google Services Json'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -12,3 +17,7 @@ runs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
+
+    - name: Create google-services.json
+      shell: bash
+      run: echo -n "${{ inputs.google-services }}" | base64 --decode > ./app/google-services.json

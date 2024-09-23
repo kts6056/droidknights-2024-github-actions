@@ -1,0 +1,54 @@
+name: "Create Pull Request to Release"
+description: "Create Pull Request to Release"
+
+
+inputs:
+  branch:
+    description: '배포될 베이스 브랜치'
+    required: true
+  version_name:
+    description: '배포될 앱 버전 이름'
+    required: true
+  github_token:
+    description: '깃헙 토큰'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Determine PR type and version
+      shell: bash
+      id: pr_details
+      run: |
+        BRANCH_NAME="${{ inputs.branch }}"
+
+        if [[ "$BRANCH_NAME" =~ ^release/([0-9]+)$ ]]; then
+          echo "PR_TYPE=Release" >> $GITHUB_ENV
+          echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        elif [[ "$BRANCH_NAME" =~ ^hotfix/([0-9]+)$ ]]; then
+          echo "PR_TYPE=Hotfix" >> $GITHUB_ENV
+          echo "VERSION=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+        else
+          echo "배포는 'release/' 혹은 'hotfix/'에서 되어야 해요."
+          exit 1
+        fi
+        
+    - name: Set PR title and body
+      shell: bash
+      run: |
+        echo "TITLE=[SYNC] : ${{ env.PR_TYPE }} ${{ inputs.version_name }}" >> $GITHUB_ENV
+        echo "BODY=${{ env.PR_TYPE }}를 위한 ${{ inputs.version_name }}(${{ env.VERSION }}) 버전 PR 입니다." >> $GITHUB_ENV
+
+    - name: Create Pull Request to main
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        gh pr create --draft --base "main" --head "${{ inputs.branch }}" --title "${{ env.TITLE }} to main" --body "${{ env.BODY }}" --milestone "${{ inputs.version_name }}"
+
+    - name: Create Pull Request to develop
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        gh pr create  --draft --base "develop" --head "${{ inputs.branch }}" --title "${{ env.TITLE }} to develop" --body "${{ env.BODY }}" --milestone "${{ inputs.version_name }}"

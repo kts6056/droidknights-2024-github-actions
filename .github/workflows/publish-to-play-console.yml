@@ -1,0 +1,60 @@
+name: "[CD] Publish App Bundle to Google Play Console"
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  publish-app-bundle:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Development Environment
+        uses: ./.github/actions/setup-development-environment
+        with:
+          google-services: ${{ secrets.GOOGLE_SERVICES }}
+
+      - name: Check Android Lint
+        uses: ./.github/actions/missing-translation-lint
+
+      - name: Build App Bundle
+        run: ./gradlew bundleRelease
+
+      - name: Set AAB path
+        id: apk
+        shell: bash
+        run: echo "PATH=$(find ./ -name *.aab)" >> $GITHUB_OUTPUT
+
+      - name: Deploy
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_PUBLISHER_CREDENTIALS }}
+          packageName: com.example.myapplication
+          releaseFiles: ${{ steps.apk.outputs.PATH }}
+          track: production
+          status: inProgress
+          userFraction: 0.05
+
+      - name: Notify Publish Success
+        shell: bash
+        run: |
+          message="빌드가 구글 플레이에 5%로 단계적 배포 되었어요!🎉🥳🚀"
+          curl https://slack.com/api/chat.postMessage -X POST \
+          -H "Authorization: Bearer ${{ secrets.SLACK_TOKEN }}" \
+          -H "Content-type: application/json; charset=utf-8" \
+          --data '{"channel":"'"${{ env.DEPLOY_SLACK_CHANNEL_ID }}"'", "text":"'"$message"'"}'
+
+      - name: Notify Publish Failure
+        if: ${{ failure() }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          message="구글 플레이스토어에 배포를 실패했어요."
+          curl https://slack.com/api/chat.postMessage -X POST \
+          -H "Authorization: Bearer ${{ secrets.SLACK_TOKEN }}" \
+          -H "Content-type: application/json; charset=utf-8" \
+          --data '{"channel":"'"${{ env.DEPLOY_SLACK_CHANNEL_ID }}"'", "text":"'"$message"'"}'

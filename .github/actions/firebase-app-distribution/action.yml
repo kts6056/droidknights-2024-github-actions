@@ -1,0 +1,74 @@
+name: 'Firebase App Distribution'
+description: 'GitHub Action that uploads artifacts to Firebase App Distribution'
+inputs:
+  appId:
+    description: 'App id can be found on the General Settings page'
+    required: true
+  serviceCredentialsFile:
+    description: 'Service credentials file'
+    required: true
+  file:
+    description: 'Artifact to upload (.apk or .ipa)'
+    required: true
+  groups:
+    description: 'Distribution groups'
+    required: true
+  releaseNotes:
+    description: 'Release notes visible on release page'
+    required: true
+  debug:
+    description: 'Flag that can included to print verbose log output.'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Firebase App Distribution
+      shell: bash
+      run: |
+        # Homebrew 설치 확인
+        if ! command -v brew &> /dev/null
+        then
+            echo -e '\n homebrew 설치를 먼저 해주세요\n Homebrew 설치 방법 => https://brew.sh/'
+            exit 1
+        else
+            echo '✅ Homebrew 설치 확인됨.'
+        fi
+
+        # firebase-cli 설치 확인
+        if ! command -v firebase &> /dev/null
+        then
+            brew install firebase-cli
+            if [ $? -ne 0 ]; then
+                echo ':x: firebase-cli 설치 실패.'
+                exit 1
+            fi
+        else
+            echo '✅ firebase-cli 설치 확인됨.'
+        fi
+
+    - name: Upload Firebase App Distribution
+      shell: bash
+      run: |
+        export GOOGLE_APPLICATION_CREDENTIALS="${{ inputs.serviceCredentialsFile }}"
+        firebase \
+            appdistribution:distribute "${{ inputs.file }}" \
+            --app "${{ inputs.appId }}" \
+            --groups "${{ inputs.groups }}" \
+            --release-notes "${{ inputs.releaseNotes }}" \
+            $( (( ${{ inputs.debug }} )) && printf %s '--debug' ) |
+            {
+                while read -r line; do
+                  echo $line
+            
+                  if [[ $line == *"View this release in the Firebase console"* ]]; then
+                    CONSOLE_URI=$(echo "$line" | sed -e 's/.*: //' -e 's/^ *//;s/ *$//')
+                    echo "FIREBASE_CONSOLE_URI=$CONSOLE_URI" >>"$GITHUB_OUTPUT"
+                  elif [[ $line == *"Share this release with testers who have access"* ]]; then
+                    TESTING_URI=$(echo "$line" | sed -e 's/.*: //' -e 's/^ *//;s/ *$//')
+                    echo "TESTING_URI=$TESTING_URI" >>"$GITHUB_OUTPUT"
+                  elif [[ $line == *"Download the release binary"* ]]; then
+                    BINARY_URI=$(echo "$line" | sed -e 's/.*: //' -e 's/^ *//;s/ *$//')
+                    echo "BINARY_DOWNLOAD_URI=$BINARY_URI" >>"$GITHUB_OUTPUT"
+                  fi
+                done
+            }
