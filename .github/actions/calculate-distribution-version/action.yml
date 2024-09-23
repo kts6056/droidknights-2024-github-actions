@@ -1,6 +1,15 @@
 name: 'Calculate Distribution Version'
 description: 'Calculate Next Distribution Version'
 
+inputs:
+  is_hotfix:
+    description: '핫픽스를 위한 버전 여부'
+    default: false
+    required: false
+  file:
+    description: "업데이트 할 파일 경로"
+    required: true
+
 outputs:
   year:
     description: "다음 정기배포 년도 버전"
@@ -17,7 +26,6 @@ outputs:
   version_name:
     description: "다음 정기배포 버전 네임"
     value: ${{ steps.calc-next-version.outputs.version_name }}
-  
 
 runs:
   using: "composite"
@@ -26,14 +34,30 @@ runs:
       id: calc-next-version
       shell: bash
       run: |
-        # 다음 정기배포 버전 정보
-        year=$(TZ="Asia/Seoul" date +'%y')
-        week=$(TZ="Asia/Seoul" date +'%V')
-        hotfix=00
-        
-        version_code="${year}${week}00"
-        version_name="${year}.${week}.0"
-        
+        if ${{ inputs.is_hotfix }}; then
+          # 핫픽스 배포의 경우, 기존 버전 정보에서 핫픽스 번호 증가
+          if command -v jq &> /dev/null; then
+            year=$(jq -r .year ${{ inputs.file }})
+            week=$(jq -r .week_no ${{ inputs.file }})
+            hotfix=$(jq -r .hotfix ${{ inputs.file }})
+          else
+            year=$(sed -n 's/.*"year": \([0-9]*\).*/\1/p' ${{ inputs.file }})
+            week=$(sed -n 's/.*"week_no": \([0-9]*\).*/\1/p' ${{ inputs.file }})
+            hotfix=$(sed -n 's/.*"hotfix": \([0-9]*\).*/\1/p' ${{ inputs.file }})
+          fi
+          
+          hotfix=$((hotfix + 1))
+        else
+          # 정기 배포의 경우, 현재 날짜 기준으로 새 버전 생성
+          year=$(TZ="Asia/Seoul" date +'%y')
+          week=$(TZ="Asia/Seoul" date +'%V')
+          hotfix=00  # 핫픽스 초기화
+        fi
+
+        version_code="$(printf "%02d" $year)$(printf "%02d" $week)$(printf "%02d" $hotfix)"
+        version_name="${year}.${week}.${hotfix}"
+
+        # 계산된 배포 버전 반환
         echo "year=$year" >> $GITHUB_OUTPUT
         echo "week=$week" >> $GITHUB_OUTPUT
         echo "hotfix=$hotfix" >> $GITHUB_OUTPUT
