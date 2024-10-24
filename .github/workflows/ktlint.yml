@@ -1,6 +1,7 @@
 name: "[CI] verify pull request"
 
 on:
+  merge_group:
   pull_request:
     types: [opened, synchronize]
 

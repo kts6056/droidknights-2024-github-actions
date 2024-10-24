@@ -1,0 +1,12 @@
+name: "[CI] Merge Queue Test"
+
+on:
+  merge_group:
+
+jobs:
+  merge_queue:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Test
+          run: | 
+            exit 1;
